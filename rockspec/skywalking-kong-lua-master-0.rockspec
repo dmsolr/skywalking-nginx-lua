@@ -1,8 +1,8 @@
 package = "skywalking-kong-lua"
 version = "master-0"
 source = {
-   url = "git://github.com/apache/skywalking-nginx-lua",
-   branch = "master",
+   url = "git://github.com/dmsolr/skywalking-nginx-lua",
+   branch = "kong",
 }
 
 description = {

@@ -113,7 +113,7 @@ if _M.is_ngx_lua then
     _M.decode_base64 = ngx.decode_base64
 
 else
-    local Base64 = require('skywalking.dependencies.base64')
+    local Base64 = require('kong.plugins.skywalking.dependencies.base64')
     _M.encode_base64 = Base64.encode
     _M.decode_base64 = Base64.decode
 end

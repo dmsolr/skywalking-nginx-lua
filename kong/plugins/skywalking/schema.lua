@@ -17,21 +17,28 @@
 
 local typedefs = require "kong.db.schema.typedefs"
 
+
 return {
     name = "skywalking",
     fields = {
-        { protocols = typedefs.protocols_http },
+        {
+            -- this plugin will only be applied to Services or Routes
+            consumer = typedefs.no_consumer
+        },
+        {
+            -- this plugin will only run within Nginx HTTP module
+            protocols = typedefs.protocols_http
+        },
         {
             config = {
                 type = "record",
                 fields = {
-                    { backend_http_uri = typedefs.url({ required = true }) },
-                    { service_name = { type = "string", default = "Kong Service", }, },
-                    { cluster_flag = { type = "boolean", default = false }, },
-                    { service_instance_name = { type = "string", default = "Kong Service Instance", }, },
-                    { sample_ratio = { type = "number", between = { 1, 10000 }, default = 1 }, },
+                    -- Describe your plugin's configuration's schema here.
                 },
             },
         },
+    },
+    entity_checks = {
+        -- Describe your plugin's entity validation rules
     },
 }

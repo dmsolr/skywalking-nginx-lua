@@ -14,12 +14,12 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local Span = require('skywalking.span')
-local TC = require('skywalking.tracing_context')
-local Layer = require('skywalking.span_layer')
-local Segment = require('skywalking.segment')
-local Util = require("skywalking.util")
-local Const = require('skywalking.constants')
+local Span = require('kong.plugins.skywalking.span')
+local TC = require('kong.plugins.skywalking.tracing_context')
+local Layer = require('kong.plugins.skywalking.span_layer')
+local Segment = require('kong.plugins.skywalking.segment')
+local Util = require("kong.plugins.skywalking.util")
+local Const = require('kong.plugins.skywalking.constants')
 local json = require('cjson.safe')
 
 local metadata_shdict = ngx.shared.tracing_buffer

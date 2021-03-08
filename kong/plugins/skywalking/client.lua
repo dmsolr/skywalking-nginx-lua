@@ -14,7 +14,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local Const = require('skywalking.constants')
+local Const = require('kong.plugins.skywalking.constants')
 
 
 local ngx = ngx
@@ -88,7 +88,7 @@ function Client:reportServiceInstance(metadata_buffer, backend_http_uri)
     local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
 
     local cjson = require('cjson')
-    local reportInstance = require("skywalking.management").newReportInstanceProperties(serviceName, serviceInstanceName)
+    local reportInstance = require("kong.plugins.skywalking.management").newReportInstanceProperties(serviceName, serviceInstanceName)
     local reportInstanceParam, err = cjson.encode(reportInstance)
     if err then
         log(ERR, "Request to report instance fails, ", err)
@@ -124,7 +124,7 @@ function Client:ping(metadata_buffer, backend_http_uri)
     local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
 
     local cjson = require('cjson')
-    local pingPkg = require("skywalking.management").newServiceInstancePingPkg(serviceName, serviceInstanceName)
+    local pingPkg = require("kong.plugins.skywalking.management").newServiceInstancePingPkg(serviceName, serviceInstanceName)
     local pingPkgParam, err = cjson.encode(pingPkg)
     if err then
         log(ERR, "Agent ping fails, ", err)
