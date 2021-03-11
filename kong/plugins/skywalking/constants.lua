@@ -18,5 +18,4 @@ local _M = {
     segment_queue = "segment",
 }
 
-
 return _M

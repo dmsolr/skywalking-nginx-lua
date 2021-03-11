@@ -17,7 +17,6 @@
 
 local typedefs = require "kong.db.schema.typedefs"
 
-
 return {
     name = "skywalking",
     fields = {
@@ -34,11 +33,34 @@ return {
                 type = "record",
                 fields = {
                     -- Describe your plugin's configuration's schema here.
+                    {
+                        backend_http_uri = {
+                            type = "string",
+                            required = true
+                        }
+                    },
+                    {
+                        serviceName = {
+                            type = "string",
+                            required = true
+                        }
+                    },
+                    {
+                        serviceInstanceService = {
+                            type = "string",
+                            required = false
+                        }
+                    },
+                    {
+                        includeHostInEntrySpan = {
+                            type = "boolean",
+                            default = false
+                        }
+                    }
                 },
             },
         },
     },
-    entity_checks = {
-        -- Describe your plugin's entity validation rules
+    entity_checks = {-- Describe your plugin's entity validation rules
     },
 }

@@ -22,13 +22,12 @@ local Util = require("kong.plugins.skywalking.util")
 local Const = require('kong.plugins.skywalking.constants')
 local json = require('cjson.safe')
 
-local metadata_shdict = ngx.shared.tracing_buffer
+local metadata_shdict = ngx.shared.kong_db_cache
 local ngx = ngx
 local nginxComponentId = 6000
 
 
 local Tracer = {}
-
 
 function Tracer:start(upstream_name, correlation)
     local serviceName = metadata_shdict:get("serviceName")
@@ -75,26 +74,28 @@ function Tracer:start(upstream_name, correlation)
     end
 
     -- Push the data in the context
-    local ctx = ngx.ctx
+    local ctx = kong.ctx
     ctx.tracingContext = tracingContext
     ctx.entrySpan = entrySpan
     ctx.exitSpan = exitSpan
 end
 
 function Tracer:finish()
+    kong.log.info(kong.ctx.exitSpan)
+
     -- Finish the exit span when received the first response package from upstream
-    if ngx.ctx.exitSpan ~= nil then
+    if kong.ctx.exitSpan ~= nil then
         local upstream_status = tonumber(ngx.var.upstream_status)
         if upstream_status then
-            Span.tag(ngx.ctx.exitSpan, 'http.status', upstream_status)
+            Span.tag(kong.ctx.exitSpan, 'http.status', upstream_status)
         end
-        Span.finish(ngx.ctx.exitSpan, ngx.now() * 1000)
-        ngx.ctx.exitSpan = nil
+        Span.finish(kong.ctx.exitSpan, ngx.now() * 1000)
+        kong.ctx.exitSpan = nil
     end
 end
 
 function Tracer:prepareForReport()
-    local entrySpan = ngx.ctx.entrySpan
+    local entrySpan = kong.ctx.entrySpan
     if not entrySpan then
         return
     end
@@ -107,7 +108,7 @@ function Tracer:prepareForReport()
 
     Span.finish(entrySpan, ngx.now() * 1000)
 
-    local ok, segment = TC.drainAfterFinished(ngx.ctx.tracingContext)
+    local ok, segment = TC.drainAfterFinished(kong.ctx.tracingContext)
     if not ok then
         return
     end

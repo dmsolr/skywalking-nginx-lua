@@ -16,6 +16,7 @@
 --
 local Const = require('kong.plugins.skywalking.constants')
 
+local log = kong.log
 
 local ngx = ngx
 local SEGMENT_BATCH_COUNT = 100
@@ -28,14 +29,11 @@ local Client = {
 -- Tracing timer reports instance properties report, keeps alive and sends traces
 -- After report instance properties successfully, it sends keep alive packages.
 function Client:startBackendTimer(backend_http_uri)
-    local metadata_buffer = ngx.shared.tracing_buffer
+    local metadata_buffer = ngx.shared.kong_db_cache
 
     -- The codes of timer setup is following the OpenResty timer doc
     local new_timer = ngx.timer.at
     local check
-
-    local log = ngx.log
-    local ERR = ngx.ERR
 
     check = function(premature)
         if not premature and not self.stopped then
@@ -51,7 +49,7 @@ function Client:startBackendTimer(backend_http_uri)
             -- do the health check
             local ok, err = new_timer(self.backendTimerDelay, check)
             if not ok then
-                log(ERR, "failed to create timer: ", err)
+                log.err("failed to create timer: ", err)
                 return
             end
         end
@@ -60,7 +58,7 @@ function Client:startBackendTimer(backend_http_uri)
     if 0 == ngx.worker.id() then
         local ok, err = new_timer(self.backendTimerDelay, check)
         if not ok then
-            log(ERR, "failed to create timer: ", err)
+            log.err("failed to create timer: ", err)
             return
         end
     end
@@ -70,20 +68,16 @@ end
 function Client:destroyBackendTimer()
     self.stopped = true
 
-    local metadata_buffer = ngx.shared.tracing_buffer
+    local metadata_buffer = ngx.shared.kong_db_cache
     local ok, err = metadata_buffer:delete(Const.segment_queue)
     if not ok then
         return nil, err
     end
-    
+
     return true
 end
 
 function Client:reportServiceInstance(metadata_buffer, backend_http_uri)
-    local log = ngx.log
-    local DEBUG = ngx.DEBUG
-    local ERR = ngx.ERR
-
     local serviceName = metadata_buffer:get('serviceName')
     local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
 
@@ -91,7 +85,7 @@ function Client:reportServiceInstance(metadata_buffer, backend_http_uri)
     local reportInstance = require("kong.plugins.skywalking.management").newReportInstanceProperties(serviceName, serviceInstanceName)
     local reportInstanceParam, err = cjson.encode(reportInstance)
     if err then
-        log(ERR, "Request to report instance fails, ", err)
+        log.err("Request to report instance fails, ", err)
         return
     end
 
@@ -106,12 +100,12 @@ function Client:reportServiceInstance(metadata_buffer, backend_http_uri)
     })
 
     if not res then
-        log(ERR, "Instance report fails, ", err)
+        log.err("Instance report fails, ", err)
     elseif res.status == 200 then
-        log(DEBUG, "Instance report response = ", res.body)
+        log.debug("Instance report response = ", res.body)
         metadata_buffer:set('instancePropertiesSubmitted', true)
     else
-        log(ERR, "Instance report fails, response code ", res.status)
+        log.err("Instance report fails, response code ", res.status)
     end
 end
 
@@ -127,7 +121,7 @@ function Client:ping(metadata_buffer, backend_http_uri)
     local pingPkg = require("kong.plugins.skywalking.management").newServiceInstancePingPkg(serviceName, serviceInstanceName)
     local pingPkgParam, err = cjson.encode(pingPkg)
     if err then
-        log(ERR, "Agent ping fails, ", err)
+        log.err("Agent ping fails, ", err)
     end
 
     local http = require('resty.http')
@@ -142,18 +136,15 @@ function Client:ping(metadata_buffer, backend_http_uri)
 
     if err == nil then
         if res.status ~= 200 then
-            log(ERR, "Agent ping fails, response code ", res.status)
+            log.err("Agent ping fails, response code ", res.status)
         end
     else
-        log(ERR, "Agent ping fails, ", err)
+        log.err("Agent ping fails, ", err)
     end
 end
 
 -- Send segemnts data to backend
 local function sendSegments(segmentTransform, backend_http_uri)
-    local log = ngx.log
-    local ERR = ngx.ERR
-
     local http = require('resty.http')
     local httpc = http.new()
 
@@ -167,11 +158,11 @@ local function sendSegments(segmentTransform, backend_http_uri)
 
     if err == nil then
         if res.status ~= 200 then
-            log(ERR, "Segment report fails, response code ", res.status)
+            log.err("Segment report fails, response code ", res.status)
             return false
         end
     else
-        log(ERR, "Segment report fails, ", err)
+        log.err("Segment report fails, ", err)
         return false
     end
 
@@ -180,10 +171,8 @@ end
 
 -- Report trace segments to the backend
 function Client:reportTraces(metadata_buffer, backend_http_uri)
-    local log = ngx.log
-    local DEBUG = ngx.DEBUG
 
-    local queue = ngx.shared.tracing_buffer
+    local queue = ngx.shared.kong_db_cache
     local segment = queue:rpop(Const.segment_queue)
     local segmentTransform = ''
 
@@ -217,7 +206,7 @@ function Client:reportTraces(metadata_buffer, backend_http_uri)
     end
 
     if totalCount > 0 then
-        log(DEBUG, totalCount,  " segments reported.")
+        log.debug(totalCount, " segments reported.")
     end
 end
 

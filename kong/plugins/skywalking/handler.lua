@@ -15,19 +15,40 @@
 -- limitations under the License.
 --
 
+local skywalking_tracer = require("kong.plugins.skywalking.tracer")
+local skywalking_client = require("kong.plugins.skywalking.client")
+
 local SkyWalkingHandler = {
-    PRIORITY = 2001,
-    VERSION = "1.0.0",
+    PRIORITY = 100001,
+    VERSION = "0.0.1",
 }
 
+function SkyWalkingHandler:preread(config)
+end
+
 function SkyWalkingHandler:access(config)
+    local metadata_buffer = ngx.shared.kong_db_cache
+    metadata_buffer:set('serviceName', 'User_Service_Name')
+    metadata_buffer:set('serviceInstanceName', 'User_Service_Instance_Name')
+    metadata_buffer:set('includeHostInEntrySpan', false)
+
+    require("kong.plugins.skywalking.util").set_randomseed()
+    skywalking_client:startBackendTimer("http://47.74.186.96:12800")
+
     kong.log.info('access phase of skywalking plugin')
+    skywalking_tracer:start("upstream service")
 end
 
 function SkyWalkingHandler:body_filter(config)
     kong.log.info('body_filterphase of skywalking plugin')
+    if ngx.arg[2] then
+        skywalking_tracer:finish()
+    end
 end
 
 function SkyWalkingHandler:log(config)
     kong.log.info('log phase of skywalking plugin')
+    skywalking_tracer:prepareForReport()
 end
+
+return SkyWalkingHandler
