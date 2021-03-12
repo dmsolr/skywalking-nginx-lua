@@ -21,6 +21,8 @@ local log = kong.log
 local ngx = ngx
 local SEGMENT_BATCH_COUNT = 100
 
+local initialized = false
+
 local Client = {
     -- expose the delay for test
     backendTimerDelay = 3 -- in seconds 
@@ -29,11 +31,13 @@ local Client = {
 -- Tracing timer reports instance properties report, keeps alive and sends traces
 -- After report instance properties successfully, it sends keep alive packages.
 function Client:startBackendTimer(backend_http_uri)
-    local metadata_buffer = ngx.shared.kong_db_cache
+    local metadata_buffer = ngx.shared.tracing_buffer
 
     -- The codes of timer setup is following the OpenResty timer doc
     local new_timer = ngx.timer.at
     local check
+
+    initialized = true
 
     check = function(premature)
         if not premature and not self.stopped then
@@ -64,11 +68,15 @@ function Client:startBackendTimer(backend_http_uri)
     end
 end
 
+function Client:isInitilzed()
+   return initialized
+end
+
 -- Stop the tracing report timer and clean unreported data
 function Client:destroyBackendTimer()
     self.stopped = true
 
-    local metadata_buffer = ngx.shared.kong_db_cache
+    local metadata_buffer = ngx.shared.tracing_buffer
     local ok, err = metadata_buffer:delete(Const.segment_queue)
     if not ok then
         return nil, err
@@ -172,7 +180,7 @@ end
 -- Report trace segments to the backend
 function Client:reportTraces(metadata_buffer, backend_http_uri)
 
-    local queue = ngx.shared.kong_db_cache
+    local queue = ngx.shared.tracing_buffer
     local segment = queue:rpop(Const.segment_queue)
     local segmentTransform = ''
 

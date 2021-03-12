@@ -15,40 +15,54 @@
 -- limitations under the License.
 --
 
-local skywalking_tracer = require("kong.plugins.skywalking.tracer")
-local skywalking_client = require("kong.plugins.skywalking.client")
+local tracer = require("kong.plugins.skywalking.tracer")
+local client = require("kong.plugins.skywalking.client")
+local Span = require('kong.plugins.skywalking.span')
 
 local SkyWalkingHandler = {
     PRIORITY = 100001,
     VERSION = "0.0.1",
 }
 
-function SkyWalkingHandler:preread(config)
+function SkyWalkingHandler:init_worker()
+    require("kong.plugins.skywalking.util").set_randomseed()
 end
 
 function SkyWalkingHandler:access(config)
-    local metadata_buffer = ngx.shared.kong_db_cache
-    metadata_buffer:set('serviceName', 'User_Service_Name')
-    metadata_buffer:set('serviceInstanceName', 'User_Service_Instance_Name')
-    metadata_buffer:set('includeHostInEntrySpan', false)
+    if not client:isInitilzed() then
+        local metadata_buffer = ngx.shared.tracing_buffer
+        metadata_buffer:set('serviceName', config.service_name)
+        metadata_buffer:set('serviceInstanceName', config.service_instance_name)
+        metadata_buffer:set('includeHostInEntrySpan', config.include_host_in_entry_span)
 
-    require("kong.plugins.skywalking.util").set_randomseed()
-    skywalking_client:startBackendTimer("http://47.74.186.96:12800")
-
-    kong.log.info('access phase of skywalking plugin')
-    skywalking_tracer:start("upstream service")
+        client:startBackendTimer(config.backend_http_uri)
+    end
+    tracer:start(kong.request.get_forwarded_host())
 end
 
 function SkyWalkingHandler:body_filter(config)
-    kong.log.info('body_filterphase of skywalking plugin')
     if ngx.arg[2] then
-        skywalking_tracer:finish()
+        local entrySpan = ngx.ctx.entrySpan
+        Span.tag(entrySpan, 'kong.node', kong.node.get_hostname())
+
+        local service = kong.router.get_service()
+        if service and service.id then
+            Span.tag(entrySpan, 'kong.service', service.id)
+            local route = kong.router.get_route()
+            if route and route.id then
+                Span.tag(entrySpan, "kong.route", route.id)
+            end
+            if type(service.name) == "string" then
+                Span.tag(entrySpan, "kong.service_name", service.name)
+            end
+        end
+
+        tracer:finish()
     end
 end
 
 function SkyWalkingHandler:log(config)
-    kong.log.info('log phase of skywalking plugin')
-    skywalking_tracer:prepareForReport()
+    tracer:prepareForReport()
 end
 
 return SkyWalkingHandler

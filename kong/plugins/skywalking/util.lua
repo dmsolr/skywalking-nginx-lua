@@ -129,13 +129,13 @@ if _M.is_ngx_lua then
         nrec = nrec or 8
         name = name or "sw_default_tab"
 
-        local sw_tab_pool = kong.ctx.sw_tab_pool
+        local sw_tab_pool = ngx.ctx.sw_tab_pool
         if not sw_tab_pool then
             sw_tab_pool = tablepool.fetch("sw_tab_pool", 128, 0)
             insert_tab(sw_tab_pool, "sw_tab_pool")
             insert_tab(sw_tab_pool, sw_tab_pool)
 
-            kong.ctx.sw_tab_pool = sw_tab_pool
+            ngx.ctx.sw_tab_pool = sw_tab_pool
         end
 
         local tab = tablepool.fetch(name, narr, nrec)
@@ -144,7 +144,7 @@ if _M.is_ngx_lua then
         return tab
     end
     _M.tablepool_release = function()
-        local sw_tab_pool = kong.ctx.sw_tab_pool
+        local sw_tab_pool = ngx.ctx.sw_tab_pool
         if not sw_tab_pool then
             return
         end
@@ -157,7 +157,7 @@ if _M.is_ngx_lua then
         end
         clear_tab(sw_tab_pool)
 
-        kong.ctx.sw_tab_pool = nil
+        ngx.ctx.sw_tab_pool = nil
     end
 else
     _M.tablepool_fetch = function () return {} end

@@ -21,18 +21,15 @@ return {
     name = "skywalking",
     fields = {
         {
-            -- this plugin will only be applied to Services or Routes
             consumer = typedefs.no_consumer
         },
         {
-            -- this plugin will only run within Nginx HTTP module
             protocols = typedefs.protocols_http
         },
         {
             config = {
                 type = "record",
                 fields = {
-                    -- Describe your plugin's configuration's schema here.
                     {
                         backend_http_uri = {
                             type = "string",
@@ -40,19 +37,19 @@ return {
                         }
                     },
                     {
-                        serviceName = {
+                        service_name = {
                             type = "string",
                             required = true
                         }
                     },
                     {
-                        serviceInstanceService = {
+                        service_instance_name = {
                             type = "string",
                             required = false
                         }
                     },
                     {
-                        includeHostInEntrySpan = {
+                        include_host_in_entry_span = {
                             type = "boolean",
                             default = false
                         }
@@ -61,6 +58,6 @@ return {
             },
         },
     },
-    entity_checks = {-- Describe your plugin's entity validation rules
+    entity_checks = {
     },
 }
