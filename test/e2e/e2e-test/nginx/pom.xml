@@ -22,10 +22,11 @@
 
     <parent>
         <groupId>org.apache.skywalking.plugin.nginx-lua</groupId>
-        <artifactId>e2e-tests</artifactId>
+        <artifactId>e2e-test</artifactId>
         <version>1.0.0</version>
     </parent>
-    <artifactId>e2e-with-mock-collector</artifactId>
+    
+    <artifactId>nginx</artifactId>
     <packaging>jar</packaging>
 
     <build>
@@ -43,6 +44,7 @@
                                 <dependsOn>
                                     <container>skywalking-collector</container>
                                 </dependsOn>
+                                <workdir>/skywalking-nginx-lua</workdir>
                                 <ports>
                                     <port>+nginx.host:nginx.port:8080</port>
                                 </ports>
@@ -51,13 +53,17 @@
                                         <volume>${project.basedir}/docker/conf.d:/var/nginx/conf.d</volume>
                                         <volume>${project.basedir}/docker/bin:/opt/bin</volume>
                                         <volume>
-                                            ${project.basedir}/../../../lib:/usr/local/skywalking-nginx-lua/lib
+                                            ${project.basedir}/../../..:/skywalking-nginx-lua
                                         </volume>
                                     </bind>
                                 </volumes>
                                 <links>
                                     <link>skywalking-collector</link>
                                 </links>
+                                <runCmds>
+                                    <run>apt update</run>
+                                    <run>apt install -f luarocks</run>
+                                </runCmds>
                                 <wait>
                                     <http>
                                         <url>
